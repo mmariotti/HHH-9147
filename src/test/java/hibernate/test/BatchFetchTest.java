@@ -1,46 +1,59 @@
 package hibernate.test;
 
 import java.util.List;
-import javax.ejb.embeddable.EJBContainer;
-import javax.naming.Context;
-import javax.naming.NamingException;
+import javax.ejb.EJB;
 import org.hibernate.Hibernate;
-import org.junit.AfterClass;
-import org.junit.Assert;
+import org.jboss.arquillian.container.test.api.Deployment;
+import org.jboss.arquillian.junit.Arquillian;
+import org.jboss.shrinkwrap.api.ShrinkWrap;
+import org.jboss.shrinkwrap.api.asset.EmptyAsset;
+import org.jboss.shrinkwrap.api.spec.WebArchive;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import hibernate.ejb.DummyService;
 import hibernate.model.Item;
 
 
+@RunWith(Arquillian.class)
 public class BatchFetchTest
 {
-    private static Context ctx;
-
-    private static EJBContainer ejbContainer;
-
+    @EJB
     private DummyService service;
 
-    @BeforeClass
-    public void setUp()
+    @Deployment
+    public static WebArchive createDeployment()
     {
-        ejbContainer = EJBContainer.createEJBContainer();
-        ctx = ejbContainer.getContext();
+        // Create deploy file
+        WebArchive war = ShrinkWrap.create(WebArchive.class, "test.war");
+        war.addPackages(true, "hibernate");
+
+        // Import Maven runtime dependencies
+//        File[] files = Maven.resolver()
+//            .loadPomFromFile("pom.xml")
+//            .importRuntimeDependencies()
+//            .resolve()
+//            .withTransitivity()
+//            .asFile();
+//
+//        for(File file : files)
+//        {
+//            war.addAsLibrary(file);
+//        }
+
+        war.addAsResource("META-INF/persistence.xml");
+        war.addAsManifestResource(EmptyAsset.INSTANCE, "beans.xml");
+
+        // Show the deploy structure
+        System.out.println(war.toString(true));
+
+        return war;
     }
 
     @Before
-    public void recall() throws NamingException
+    public void setUp()
     {
-        service = (DummyService) ctx.lookup(DummyService.LOOKUP);
-        Assert.assertNotNull(service);
-    }
-
-    @AfterClass
-    public void tearDown()
-    {
-        ejbContainer.close();
-        System.out.println("Closing the container");
+        service.populate();
     }
 
     @Test
